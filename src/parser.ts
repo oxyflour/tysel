@@ -1,20 +1,21 @@
 import { AstNode, Literal, Id, Lambda, Apply, Let, Letrec } from './common'
 
-function convert(node: any): AstNode {
+function unfold(node: any): AstNode {
     if (Array.isArray(node)) {
         var head = node[0]
-        if (head === 'lambda' && node.length > 3)
-            return new Lambda(new Id(node[1]), convert(['lambda'].concat(node.slice(2))))
-        else if (head === 'lambda')
-            return new Lambda(new Id(node[1]), convert(node[2]))
-        else if (head === 'let')
-            return new Let(new Id(node[1]), convert(node[2]), convert(node[3]))
-        else if (head === 'letrec')
-            return new Letrec(new Id(node[1]), convert(node[2]), convert(node[3]))
-        else if (node.length > 2)
-            return new Apply(convert(node.slice(0, -1)), convert(node.slice(-1)[0]))
-        else
-            return new Apply(convert(node[0]), convert(node[1]))
+        if (head === 'lambda') {
+            var body = node.length > 3 ? ['lambda'].concat(node.slice(2)) : node[2]
+            return new Lambda(new Id(node[1]), unfold(body))
+        }
+        else if (head === 'let' || head === 'letrec') {
+            var Cls = head === 'let' ? Let : Letrec,
+                body = node.length > 4 ? [head].concat(node.slice(3)) : node[3]
+            return new Cls(new Id(node[1]), unfold(node[2]), unfold(body))
+        }
+        else {
+            var func = node.length > 2 ? node.slice(0, -1) : node[0]
+            return new Apply(unfold(func), unfold(node[node.length - 1]))
+        }
     }
     else {
         // TODO: support more types
@@ -39,5 +40,5 @@ export function parse(source: string): AstNode {
         else
             stack[stack.length - 1].push(token)
     })
-    return convert(stack[0])
+    return unfold(stack[0])
 }
