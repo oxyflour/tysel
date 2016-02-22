@@ -23,6 +23,7 @@ const env = new TypeEnv({
     times: FunctionType(IntegerType, FunctionType(IntegerType, IntegerType)),
 })
 
+/*
 ;[
     `letrec factorial
         (lambda n
@@ -46,14 +47,18 @@ const env = new TypeEnv({
     }
 })
 
-var result = evaluate(parse('? (+ 1 1)'), {
-    '+': a => b => a + b,
-    '?': a => (console.log(a), a)
-})
-console.log(result)
-
 var source = compile(parse('? (+ 1 1)'), {
     '+': 'a => b => a + b',
     '?': 'a => (console.log(a), a)'
 })
 console.log(source)
+*/
+
+var result = evaluate(parse('? (1 - 1 + 100)'), {
+    '+': a => b => a + b,
+    '-': a => b => a - b,
+    '*': a => b => a * b,
+    '/': a => b => a / b,
+    '?': a => (console.log(a), a)
+})
+console.log(result)

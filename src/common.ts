@@ -17,7 +17,13 @@ export class Lambda implements AstNode {
 }
 
 export class Apply implements AstNode {
-    constructor(public func: AstNode, public arg: AstNode) { }
+    static INFIX = '+|-|*|/'.split('|').reduce((d, c) => (d[c] = 1, d), { })
+
+    constructor(public func: AstNode, public arg: AstNode) {
+        var a = arg.toString()
+        if (Apply.INFIX[a])
+            [this.func, this.arg] = [arg, func]
+    }
     toString() { return `(${this.func} ${this.arg})` }
 }
 
