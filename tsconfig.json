@@ -5,7 +5,6 @@
 		"outDir": "build"
 	},
 	"files": [
-		"index.ts",
-		"src/*.ts"
+		"index.ts"
 	]
 }
