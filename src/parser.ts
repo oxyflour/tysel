@@ -30,7 +30,7 @@ function unfold(node: any): AstNode {
 
 export function parse(source: string): AstNode {
     var tokens = source.replace(/(\(|\))/g, ' $1 ')
-            .replace(/\s+/g, ' ').replace(/\s+$/, '').split(' '),
+            .replace(/\s+/g, ' ').split(' ').filter(x => x.length > 0),
         stack = [ [] ]
     tokens.forEach(token => {
         if (token === '(')
