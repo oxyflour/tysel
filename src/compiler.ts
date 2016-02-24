@@ -1,4 +1,4 @@
-import { AstNode, Literal, Id, Lambda, Apply, Let, Letrec } from './common'
+import { AstNode, Literal, Id, Lambda, Apply } from './common'
 
 export function compile(node: AstNode, env = { }): any {
     if (node instanceof Literal)
@@ -9,8 +9,6 @@ export function compile(node: AstNode, env = { }): any {
         return `(${node.arg.name} => ${compile(node.body, env)})`
     else if (node instanceof Apply)
         return `(${compile(node.func, env)})(${compile(node.arg, env)})`
-    else if (node instanceof Let)
-        return compile(new Apply(new Lambda(node.variable, node.body), node.value), env)
     else
         throw 'not implemented'
 }

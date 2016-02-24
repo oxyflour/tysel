@@ -1,16 +1,31 @@
-import { AstNode, Literal, Id, Lambda, Apply, Let, Letrec } from './common'
+import { AstNode, Literal, Id, Lambda, Apply } from './common'
 
 function unfold(node: any): AstNode {
     if (Array.isArray(node)) {
         var head = node[0]
-        if (head === 'lambda') {
-            var body = node.length > 3 ? ['lambda'].concat(node.slice(2)) : node[2]
+        if (head === '\\') {
+            var body = node.length > 3 ? [head].concat(node.slice(2)) : node[2]
             return new Lambda(new Id(node[1]), unfold(body))
         }
-        else if (head === 'let' || head === 'letrec') {
-            var Cls = head === 'let' ? Let : Letrec,
-                body = node.length > 4 ? [head].concat(node.slice(3)) : node[3]
-            return new Cls(new Id(node[1]), unfold(node[2]), unfold(body))
+        else if (head === 'let') {
+            var body = node.length > 4 ? [head].concat(node.slice(3)) : node[3]
+            return unfold([
+                ['\\', node[1], body],
+                node[2]])
+        }
+        else if (head === 'letrec') {
+            var body = node.length > 4 ? [head].concat(node.slice(3)) : node[3]
+            return unfold([
+                ['\\', node[1], body],
+                ['Y', ['\\', node[1], node[2]]]])
+        }
+        else if (head === 'if') {
+            var body = node.length > 4 ? [head].concat(node.slice(3)) : node[3]
+            return unfold([
+                ['?', node[1],
+                    ['\\'].concat(['_', node[2]]),
+                    ['\\'].concat(['_', body])],
+                '0'])
         }
         else {
             var func = node.length > 2 ? node.slice(0, -1) : node[0]
@@ -29,7 +44,7 @@ function unfold(node: any): AstNode {
 }
 
 export function parse(source: string): AstNode {
-    var tokens = source.replace(/(\(|\))/g, ' $1 ')
+    var tokens = source.replace(/(\(|\)|,)/g, ' $1 ')
             .replace(/\s+/g, ' ').split(' ').filter(x => x.length > 0),
         stack = [ [] ]
     tokens.forEach(token => {

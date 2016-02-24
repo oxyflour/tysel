@@ -17,7 +17,7 @@ export class Lambda implements AstNode {
 }
 
 export class Apply implements AstNode {
-    static INFIX = '+|-|*|/|>|<|>=|<=|==|!=|:'
+    static INFIX = '+|-|*|/|>|<|>=|<=|==|!=|,'
         .split('|').reduce((d, c) => (d[c] = 1, d), { })
 
     constructor(public func: AstNode, public arg: AstNode) {
@@ -26,14 +26,4 @@ export class Apply implements AstNode {
             [this.func, this.arg] = [arg, func]
     }
     toString() { return `(${this.func} ${this.arg})` }
-}
-
-export class Let implements AstNode {
-    constructor(public variable: Id, public value: AstNode, public body: AstNode) { }
-    toString() { return `(let ${this.variable} = ${this.value} in ${this.body})` }
-}
-
-export class Letrec implements AstNode {
-    constructor(public variable: Id, public value: AstNode, public body: AstNode) { }
-    toString() { return `(letrec ${this.variable} = ${this.value} in ${this.body})` }
 }

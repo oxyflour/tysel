@@ -1,4 +1,4 @@
-import { AstNode, Literal, Id, Lambda, Apply, Let, Letrec } from './common'
+import { AstNode, Literal, Id, Lambda, Apply } from './common'
 
 function apply(func, arg, env) {
     if (Array.isArray(func)) {
@@ -21,8 +21,6 @@ export function evaluate(node: AstNode, env = { }): any {
         return [node, env]
     else if (node instanceof Apply)
         return apply(evaluate(node.func, env), evaluate(node.arg, env), env)
-    else if (node instanceof Let)
-        return evaluate(new Apply(new Lambda(node.variable, node.body), node.value), env)
     else
         throw 'not implemented'
 }

@@ -4,7 +4,7 @@
 
 /// <reference path="../typings/lib.es6.d.ts" />
 
-import { AstNode, Literal, Id, Lambda, Apply, Let, Letrec } from './common'
+import { AstNode, Literal, Id, Lambda, Apply } from './common'
 
 export interface AstType {
 }
@@ -148,19 +148,6 @@ export function analyse(node: AstNode, env: TypeEnv, nonGeneric: Set<AstType>) {
             newGeneric = new Set(Array.from(nonGeneric).concat(argType)),
             retType = analyse(node.body, newEnv, newGeneric)
         return functionType(argType, retType)
-    }
-    else if (node instanceof Let) {
-        let valType = analyse(node.value, env, nonGeneric),
-            newEnv = env.extend(node.variable, valType)
-        return analyse(node.body, newEnv, nonGeneric)
-    }
-    else if (node instanceof Letrec) {
-        let newType = new TypeVariable(),
-            newEnv = env.extend(node.variable, newType),
-            newGeneric = new Set(Array.from(nonGeneric).concat(newType)),
-            valType = analyse(node.value, newEnv, newGeneric)
-        unify(newType, valType)
-        return analyse(node.body, newEnv, nonGeneric)
     }
     else {
         throw 'unhandled syntax node ' + node
