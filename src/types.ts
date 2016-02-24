@@ -123,9 +123,10 @@ function occursInTypes(type: TypeVariable, types: AstType[]) {
     return types.some(t => occursInType(type, t))
 }
 
-export const IntegerType = new TypeOperator(typeof(0), [])
-export const BoolType = new TypeOperator(typeof(true), [])
-export const FunctionType = (from: AstType, to: AstType) => new TypeOperator('->', [from, to])
+export function functionType (...args: AstType[]) {
+    var list = args.slice(), last = list.pop()
+    return list.reduceRight((c, a) => new TypeOperator('->', [a, c]), last)
+}
 
 export function analyse(node: AstNode, env: TypeEnv, nonGeneric: Set<AstType>) {
     if (node instanceof Literal) {
@@ -138,7 +139,7 @@ export function analyse(node: AstNode, env: TypeEnv, nonGeneric: Set<AstType>) {
         let funcType = analyse(node.func, env, nonGeneric),
             argType = analyse(node.arg, env, nonGeneric),
             retType = new TypeVariable()
-        unify(FunctionType(argType, retType), funcType)
+        unify(functionType(argType, retType), funcType)
         return retType
     }
     else if (node instanceof Lambda) {
@@ -146,7 +147,7 @@ export function analyse(node: AstNode, env: TypeEnv, nonGeneric: Set<AstType>) {
             newEnv = env.extend(node.arg, argType),
             newGeneric = new Set(Array.from(nonGeneric).concat(argType)),
             retType = analyse(node.body, newEnv, newGeneric)
-        return FunctionType(argType, retType)
+        return functionType(argType, retType)
     }
     else if (node instanceof Let) {
         let valType = analyse(node.value, env, nonGeneric),

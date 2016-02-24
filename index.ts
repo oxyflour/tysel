@@ -1,6 +1,6 @@
 import {
+    AstType, functionType,
     TypeVariable, TypeOperator, TypeEnv,
-    IntegerType, BoolType, FunctionType,
     analyse
 } from './src/types'
 
@@ -10,9 +10,9 @@ import { compile } from './src/compiler'
 
 import { parse } from './src/parser'
 
-const log = e => (console.log(e), e)
-
 function EXEC(source: string, valEnv: any, typeEnv: any) {
+    const log = e => (console.log(e.toString()), e)
+
     try {
         var exp = log(parse(source)),
             type = log(analyse(exp, new TypeEnv(typeEnv), new Set())),
@@ -24,7 +24,11 @@ function EXEC(source: string, valEnv: any, typeEnv: any) {
     }
 }
 
-EXEC('(1 / 1) - (2 * 4) + 3', {
+const IntegerType = new TypeOperator(typeof(0), []),
+    BoolType = new TypeOperator(typeof(true), []),
+    PairType = ((a, b) => functionType(a, b, new TypeOperator('*', [a, b])))(new TypeVariable(), new TypeVariable())
+
+EXEC('1 : 2 : 3 : 4 : 5', {
     '+':  a => b => a + b,
     '-':  a => b => a - b,
     '*':  a => b => a * b,
@@ -35,17 +39,17 @@ EXEC('(1 / 1) - (2 * 4) + 3', {
     '<=': a => b => a <= b,
     '==': a => b => a === b,
     '!=': a => b => a !== b,
-    '?':  a => (console.log(a), a),
+    ':':  a => b => ({ a, b, toString(){ return '[' + a + ',' + b + ']' } }),
 }, {
-    '+':  FunctionType(IntegerType, FunctionType(IntegerType, IntegerType)),
-    '-':  FunctionType(IntegerType, FunctionType(IntegerType, IntegerType)),
-    '*':  FunctionType(IntegerType, FunctionType(IntegerType, IntegerType)),
-    '/':  FunctionType(IntegerType, FunctionType(IntegerType, IntegerType)),
-    '>':  FunctionType(IntegerType, FunctionType(IntegerType, BoolType)),
-    '<':  FunctionType(IntegerType, FunctionType(IntegerType, BoolType)),
-    '>=': FunctionType(IntegerType, FunctionType(IntegerType, BoolType)),
-    '<=': FunctionType(IntegerType, FunctionType(IntegerType, BoolType)),
-    '==': FunctionType(IntegerType, FunctionType(IntegerType, BoolType)),
-    '!=': FunctionType(IntegerType, FunctionType(IntegerType, BoolType)),
-    '?':  (a => FunctionType(a, a))(new TypeVariable()),
+    '+':  functionType(IntegerType, IntegerType, IntegerType),
+    '-':  functionType(IntegerType, IntegerType, IntegerType),
+    '*':  functionType(IntegerType, IntegerType, IntegerType),
+    '/':  functionType(IntegerType, IntegerType, IntegerType),
+    '>':  functionType(IntegerType, IntegerType, BoolType),
+    '<':  functionType(IntegerType, IntegerType, BoolType),
+    '>=': functionType(IntegerType, IntegerType, BoolType),
+    '<=': functionType(IntegerType, IntegerType, BoolType),
+    '==': functionType(IntegerType, IntegerType, BoolType),
+    '!=': functionType(IntegerType, IntegerType, BoolType),
+    ':':  PairType,
 })
