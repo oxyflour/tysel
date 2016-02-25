@@ -2,8 +2,6 @@
 // reference http://smallshire.org.uk/sufficientlysmall/2010/04/11/
 // a-hindley-milner-type-inference-implementation-in-python/
 
-/// <reference path="../typings/lib.es6.d.ts" />
-
 import { AstNode, Literal, Id, Lambda, Apply } from './common'
 
 export interface AstType {
