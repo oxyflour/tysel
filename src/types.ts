@@ -128,7 +128,9 @@ export function functionType (...args: AstType[]) {
     return list.reduceRight((c, a) => new TypeOperator('->', [a, c]), last)
 }
 
-export function analyse(node: AstNode, env: TypeEnv, nonGeneric: Set<AstType>) {
+export function analyse(node: AstNode, envOrMap: any, nonGeneric: Set<AstType> = new Set()) {
+    var env: TypeEnv = envOrMap instanceof TypeEnv ? envOrMap : new TypeEnv(envOrMap)
+
     if (node instanceof Literal) {
         return new TypeOperator(typeof(node.value), [])
     }
