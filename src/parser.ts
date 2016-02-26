@@ -1,5 +1,10 @@
 import { AstNode, Literal, Id, Lambda, Apply } from './common'
 
+const INFIX = '+|-|*|/|>|<|>=|<=|==|!=|,|;'
+    .split('|').reduce((d, c) => (d[c] = 1, d), { })
+
+const SEPS = /(\(|\)|\[|\]|{|}|,|;)/g
+
 function unfold(node: any): AstNode {
     if (Array.isArray(node)) {
         var head = node[0]
@@ -28,8 +33,10 @@ function unfold(node: any): AstNode {
                 '0'])
         }
         else {
-            var func = node.length > 2 ? node.slice(0, -1) : node[0]
-            return new Apply(unfold(func), unfold(node[node.length - 1]))
+            var func = node.length > 2 ? node.slice(0, -1) : node[0],
+                arg = node[node.length - 1]
+            if (INFIX[ arg ]) [func, arg] = [arg, func]
+            return new Apply(unfold(func), unfold(arg))
         }
     }
     else {
@@ -43,15 +50,25 @@ function unfold(node: any): AstNode {
     }
 }
 
+function convertNode(node, token) {
+    if (Array.isArray(node)) {
+        if (token === '}')
+            node = node.reduce((l, n, i) => l.concat([';', n]), ['0'])
+        else if (token === ']')
+            node = node.reduce((l, n, i) => l.concat([',', n]), ['0'])
+    }
+    return node
+}
+
 export function parse(source: string): AstNode {
-    var tokens = source.replace(/(\(|\)|,)/g, ' $1 ')
+    var tokens = source.replace(SEPS, ' $1 ')
             .replace(/\s+/g, ' ').split(' ').filter(x => x.length > 0),
         stack = [ [] ]
     tokens.forEach(token => {
-        if (token === '(')
+        if (token === '(' || token === '[' || token === '{')
             stack.push([ ])
-        else if (token === ')')
-            stack[stack.length - 2].push(stack.pop())
+        else if (token === ')' || token === ']' || token === '}')
+            stack[stack.length - 2].push(convertNode(stack.pop(), token))
         else
             stack[stack.length - 1].push(token)
     })

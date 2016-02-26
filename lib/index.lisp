@@ -1,3 +1,15 @@
 letrec
-    len (\ list (if (pair? list) (len (head list) + 1) 1))
-    (len (1, 2, 3, 4, 5, 6, 7))
+	printArgs (\ a {
+		(echo a)
+		printArgs
+	})
+	printList (\ a
+		(if (pair? a) {
+			(printList (head a))
+			(echo (tail a))
+		})
+	)
+	{
+		(printArgs 1 2 3 4 5)
+		(printList [1 2])
+	}
