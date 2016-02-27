@@ -1,15 +1,8 @@
 letrec
-	printArgs (\ a {
-		(echo a)
-		printArgs
-	})
 	printList (\ a
-		(if (pair? a) {
+		(if (list? a) {
 			(printList (head a))
 			(echo (tail a))
-		})
+		} 0)
 	)
-	{
-		(printArgs 1 2 3 4 5)
-		(printList [1 2])
-	}
+	(printList [1 2 3 4])

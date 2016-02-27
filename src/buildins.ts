@@ -9,10 +9,15 @@ import { evaluate } from './interpreter'
 import { parse } from './parser'
 
 const NumberType = new TypeOperator(typeof(0), []),
-    BoolType = new TypeOperator(typeof(true), [])
+    BoolType = new TypeOperator(typeof(true), []),
+    ListItemType = new TypeVariable,
+    ListType = new TypeOperator('[]', [ListItemType])
 
-class Pair {
+class List {
     constructor(public head, public tail) { }
+}
+
+class Unit {
 }
 
 export const values = {
@@ -27,10 +32,14 @@ export const values = {
     '==': a => b => a === b,
     '!=': a => b => a !== b,
 
+    'unit': new Unit(),
+
+    'echo': t => (console.log(t), t),
+
     ';':  a => b => b,
 
-    ',':  a => b => new Pair(a, b),
-    'pair?': a => a instanceof Pair,
+    ',':  a => b => new List(a, b),
+    'list?': a => a instanceof List,
     'head': a => a.head,
     'tail': a => a.tail,
 
@@ -39,8 +48,6 @@ export const values = {
     //        implementation-of-recursive-fixed-point-y-combinator-...
     //        in-javascript-for-memoization/
     'Y':  evaluate(parse('\\ F (F (\\ x ((Y F) x)))')),
-
-    'echo': t => (console.log(t), t),
 }
 
 export const types = {
@@ -55,16 +62,17 @@ export const types = {
     '==': functionType(NumberType, NumberType, BoolType),
     '!=': functionType(NumberType, NumberType, BoolType),
 
+    'echo': functionType(new TypeVariable, new TypeVariable),
+
     ';':  ((a, b) => functionType(a, b, b))(new TypeVariable, new TypeVariable),
 
-    ',':  ((a, b) => functionType(a, b, new TypeOperator('*', [a, b])))(new TypeVariable, new TypeVariable),
-    'pair?': functionType(new TypeVariable, BoolType),
-    'head': (a => functionType(a, a))(new TypeVariable),
-    'tail': functionType(new TypeVariable, NumberType),
+    ',':  functionType(ListType, ListItemType, ListType),
+    'unit': ListType,
+    'list?': functionType(ListType, BoolType),
+    'head': functionType(ListType, ListType),
+    'tail': functionType(ListType, ListItemType),
 
     '?':  (a => functionType(BoolType, a, a, a))(new TypeVariable),
     // https://en.wikipedia.org/wiki/Fixed-point_combinator#Type_for_the_Y_combinator
     'Y':  (a => functionType(functionType(a, a), a))(new TypeVariable),
-
-    'echo': (a => functionType(a, a))(new TypeVariable),
 }

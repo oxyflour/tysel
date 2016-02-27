@@ -16,7 +16,7 @@ function exec(source: string) {
     var exp = parse(source),
         val, type
     try {
-//        type = analyse(exp, types)
+        type = analyse(exp, types)
         val = evaluate(exp, values)
     }
     catch (e) {
@@ -25,6 +25,4 @@ function exec(source: string) {
     return { exp, type, val }
 }
 
-var { exp, type, val } = exec(source)
-
-console.log(val, '[' + type + ']')
+exec(source)
