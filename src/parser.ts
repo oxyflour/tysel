@@ -28,8 +28,8 @@ function unfold(node: any): AstNode {
             var body = node.length > 4 ? [head].concat(node.slice(3)) : node[3]
             return unfold([
                 ['?', node[1],
-                    ['\\'].concat(['_', node[2]]),
-                    ['\\'].concat(['_', body])],
+                    ['\\', '_', node[2]],
+                    ['\\', '_', body]],
                 '0'])
         }
         else {
