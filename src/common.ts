@@ -177,7 +177,7 @@ export class Letrec implements AstNode {
 	}
 	static fromList(...args) {
 		var node = new Letrec(args[0], args[1],
-			args.length > 3 ? Let.fromList(...args.slice(2)) : args[2])
+			args.length > 3 ? Letrec.fromList(...args.slice(2)) : args[2])
 		for (var i = 0; i < args.length - 1; i += 2)
 			node.defs.push([args[i], args[i + 1]])
 		node.body = args[args.length - 1]
