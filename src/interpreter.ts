@@ -1,15 +1,17 @@
 import { AstNode, Literal, Id, Lambda, Apply } from './common'
 
-function apply(func, arg, env) {
+function apply(node: Apply, env) {
+    var func = evaluate(node.func, env),
+        arg = evaluate(node.arg, env)
     if (Array.isArray(func)) {
-        var [ lambda, environment ] = func
-        env = Object.assign({}, environment, { [lambda.arg]:arg })
-        return evaluate(lambda.body, env)
+        var [ lambda, environment ] = func,
+            fenv = Object.assign({}, environment, { [lambda.arg]:arg })
+        return evaluate(lambda.body, fenv)
     }
     else if (typeof(func) === 'function')
-        return func.call(null, arg)
+        return func['call'](null, arg)
     else
-        throw 'the function is not applicable'
+        throw 'the function `' + node.func + '` is not applicable'
 }
 
 // ...
@@ -21,7 +23,7 @@ export function evaluate(node: AstNode, env = { }): any {
     else if (node instanceof Lambda)
         return [node, env]
     else if (node instanceof Apply)
-        return apply(evaluate(node.func, env), evaluate(node.arg, env), env)
+        return apply(node, env)
     else
         throw 'not implemented'
 }

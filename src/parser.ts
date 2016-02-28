@@ -94,7 +94,7 @@ function convertNode(node, token) {
         if (token === '}')
             node = node.reduce((l, n, i) => l.concat([';', n]), ['0'])
         else if (token === ']')
-            node = node.reduce((l, n, i) => l.concat([',', n]), ['unit'])
+            node = node.reduce((l, n, i) => l.concat([',', n]), ['()'])
     }
     return node
 }
