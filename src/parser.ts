@@ -29,17 +29,18 @@ function unfoldMacro(arr: any[], macros) {
 function unfold(node: any, macros): AstNode {
     if (Array.isArray(node)) {
         var [head, ...rest] = node
-        if (head === '\\')
-            return Lambda.fromList(...rest.map(n => unfold(n, macros)))
-        else if (head === 'macro')
+        if (head === 'macro') {
             return unfold(rest[rest.length - 1], unfoldMacro(rest, macros))
-        // TODO: use pattern match to test macro here
+        }
         else if (macros['(' + head]) {
+            // TODO: use pattern match to test macro here
             var [args, body] = macros['(' + head]
             macros = Object.assign({ }, macros)
             args.forEach((n, i) => macros[n] = rest[i])
             return unfold(body, macros)
         }
+        else if (head === '\\')
+            return Lambda.fromList(...rest.map(n => unfold(n, macros)))
         else if (head === 'let')
             return Let.fromList(...unfoldLet(rest).map(n => unfold(n, macros)))
         else if (head === 'letrec')
@@ -52,15 +53,19 @@ function unfold(node: any, macros): AstNode {
             return Apply.fromList(...node.map(n => unfold(n, macros)))
     }
     else {
+        if (macros[node]) {
+            var body = macros[node]
+            body = Array.isArray(body) ? body.slice() : body
+            macros = Object.assign({ }, macros, { [node]:null })
+            return unfold(body, macros)
+        }
         // TODO: support more types
-        if (+node == node)
+        else if (+node == node)
             return new Literal(+node)
         else if (node === 'true' || node === 'false')
             return new Literal(node === 'true')
         else if (node && node[0] === "'")
             return new Literal(atob(node.substr(1)))
-        else if (macros[node])
-            return unfold(macros[node], macros)
         else
             return new Id(node)
     }
