@@ -1,7 +1,6 @@
-macro
-	(and a b) (let v a (if v b v))
-	(or  a b) (let v a (if v v b))
-	(or (echo 1) (echo 2))
+let
+	ADD (\ a b (a + b))
+	(echo (1 `ADD 2))
 ;letrec
 ;	(printList a)
 ;		(if (list? a)

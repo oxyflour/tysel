@@ -34,7 +34,7 @@ export const values = {
 
     'unit': new Unit(),
 
-    'echo': t => (console.log(t), t),
+    'echo': t => (console.log(t), values.echo),
 
     ';':  a => b => b,
 

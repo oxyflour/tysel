@@ -66,7 +66,12 @@ function unfold(node: any, macros): AstNode {
         else {
             var func = node.length > 2 ? node.slice(0, -1) : node[0],
                 arg = node[node.length - 1]
-            if (INFIX[ arg ]) [func, arg] = [arg, func]
+            if (typeof(arg) === 'string') {
+                if (INFIX[ arg ])
+                    [func, arg] = [arg, func]
+                else if (arg[0] === '`')
+                    [func, arg] = [arg.substr(1), func]
+            }
             return new Apply(unfold(func, macros), unfold(arg, macros))
         }
     }
