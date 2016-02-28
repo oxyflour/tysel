@@ -46,6 +46,8 @@ function unfold(node: any, macros): AstNode {
             return Letrec.fromList(...unfoldLet(rest).map(n => unfold(n, macros)))
         else if (head === 'if')
             return If.fromList(...rest.map(n => unfold(n, macros)))
+        else if (head === '"')
+            return new Literal(rest.join(' '))
         else
             return Apply.fromList(...node.map(n => unfold(n, macros)))
     }
@@ -55,6 +57,8 @@ function unfold(node: any, macros): AstNode {
             return new Literal(+node)
         else if (node === 'true' || node === 'false')
             return new Literal(node === 'true')
+        else if (node && node[0] === "'")
+            return new Literal(atob(node.substr(1)))
         else if (macros[node])
             return unfold(macros[node], macros)
         else
@@ -73,7 +77,14 @@ function convertNode(node, token) {
 }
 
 export function parse(source: string): AstNode {
-    var tokens = source.replace(SEPS, ' $1 ').replace(/;[^\n]*/g, '')
+    var tokens = source
+            // create string
+            .replace(/"([^"]+)"/g, (m, s) => "'" + btoa(s))
+            // seperate words
+            .replace(SEPS, ' $1 ')
+            // remove comments
+            .replace(/;[^\n]*/g, '')
+            // split
             .replace(/\s+/g, ' ').split(' ').filter(x => x.length > 0),
         stack = [ [] ]
     tokens.forEach(token => {

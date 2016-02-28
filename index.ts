@@ -14,9 +14,9 @@ function exec(source: string) {
     try {
         type = exp.analyse(new TypeEnv(types as any), new Set())
         val = exp.evaluate(values)
-        var src = compilePrelude + exp.compile(compileVarRemap)
+        var src = exp.compile(compileVarRemap)
         console.log(src)
-        console.log(val, eval(src))
+        console.log(val, eval(compilePrelude + src))
     }
     catch (e) {
         console.log('ERR: ' + (e && e.message || e))

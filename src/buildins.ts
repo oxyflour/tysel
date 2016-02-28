@@ -10,6 +10,7 @@ const VOID = () => VOID,
 
 const NumberType = new TypeOperator(typeof(0), []),
     BoolType = new TypeOperator(typeof(true), []),
+    StringType = new TypeOperator(typeof(''), []),
     ListItemType = new TypeVariable,
     ListType = new TypeOperator('[]', [ListItemType])
 
@@ -27,6 +28,7 @@ export const values = {
     '!=': a => b => a !== b,
     '?':  t => a => b => t === true ? a : b,
     ';':  a => b => b,
+    '.':  a => b => a[b],
 
     '()': NaN,
     'unit?': a => a !== a,
@@ -60,6 +62,7 @@ export const types = {
     '!=': functionType(NumberType, NumberType, BoolType),
     '?':  (a => functionType(BoolType, a, a, a))(new TypeVariable),
     ';':  ((a, b) => functionType(a, b, b))(new TypeVariable, new TypeVariable),
+    '.':  ((a, b) => functionType(a, StringType, b))(new TypeVariable, new TypeVariable),
 
     '()': ListType,
     'unit?': functionType(ListType, BoolType),
@@ -90,6 +93,7 @@ const compileConsts = {
     '!=': 'a => b => a !== b',
     '?':  't => a => b => t === true ? a : b',
     ';':  'a => b => b',
+    '.':  'a => b => a[b]',
     ',':  'a => b => [a, b]',
     '()': 'null',
     'unit?': 'a => a === null',
@@ -114,6 +118,7 @@ export const compileVarRemap = {
     '!=': 'NEQ',
     '?':  'IF',
     ';':  'BEGIN',
+    '.':  'PROP',
     ',':  'LIST',
     '()': 'NULL',
     'unit?': 'isNull',
