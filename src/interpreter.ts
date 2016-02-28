@@ -3,7 +3,8 @@ import { AstNode, Literal, Id, Lambda, Apply } from './common'
 function apply(func, arg, env) {
     if (Array.isArray(func)) {
         var [ lambda, environment ] = func
-        return evaluate(lambda.body, Object.assign({}, env, { [lambda.arg]:arg }))
+        env = Object.assign({}, environment, { [lambda.arg]:arg })
+        return evaluate(lambda.body, env)
     }
     else if (typeof(func) === 'function')
         return func.call(null, arg)
