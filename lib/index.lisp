@@ -1,6 +1,6 @@
-let
-	ADD (\ a b (a + b))
-	(echo (1 `ADD 2))
+macro
+	(ADD a b) (a + b)
+	(echo (ADD (ADD 1 2) 3))
 ;letrec
 ;	(printList a)
 ;		(if (list? a)

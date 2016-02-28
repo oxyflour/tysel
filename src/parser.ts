@@ -17,13 +17,14 @@ function unfold(node: any, macros): AstNode {
                 id = node[1], value = node[2]
             if (Array.isArray(id)) {
                 value = [id.slice(1), value]
-                id = id[0]
+                id = '(' + id[0]
             }
             macros = Object.assign({ }, macros, { [id]:value })
             return unfold(body, macros)
         }
-        else if (macros[head]) {
-            var [args, body] = macros[head],
+        // TODO: use pattern match to test macro here
+        else if (macros['(' + head]) {
+            var [args, body] = macros['(' + head],
                 vals = node.slice(1)
             macros = Object.assign({ }, macros)
             args.forEach((n, i) => macros[n] = vals[i])
