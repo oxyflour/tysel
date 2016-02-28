@@ -2,8 +2,6 @@
 // reference http://smallshire.org.uk/sufficientlysmall/2010/04/11/
 // a-hindley-milner-type-inference-implementation-in-python/
 
-import { AstNode, Literal, Id, Lambda, Apply } from './common'
-
 export interface AstType {
 }
 
@@ -34,7 +32,6 @@ export class TypeOperator implements AstType {
     }
 }
 
-// ...
 export class TypeEnv {
     constructor(public map: { [name: string]: AstType } = {}) {
     }
@@ -74,7 +71,7 @@ function fresh(type: AstType, nonGeneric: Set<AstType>) {
     return freshrec(type)
 }
 
-function unify(type1: AstType, type2: AstType) {
+export function unify(type1: AstType, type2: AstType) {
     let t1 = prune(type1),
         t2 = prune(type2)
     if (t1 instanceof TypeVariable) {
@@ -126,21 +123,13 @@ export function functionType (...args: AstType[]) {
     return list.reduceRight((c, a) => new TypeOperator('->', [a, c]), last)
 }
 
-export function analyse(node: AstNode, envOrMap: any, nonGeneric: Set<AstType> = new Set()) {
-    var env: TypeEnv = envOrMap instanceof TypeEnv ? envOrMap : new TypeEnv(envOrMap)
-
+/*
+export function analyse(node: AstNode, env: TypeEnv, nonGeneric: Set<AstType> = new Set()) {
     if (node instanceof Literal) {
         return new TypeOperator(typeof(node.value), [])
     }
     else if (node instanceof Id) {
         return env.get(node.name, nonGeneric)
-    }
-    else if (node instanceof Apply) {
-        let funcType = analyse(node.func, env, nonGeneric),
-            argType = analyse(node.arg, env, nonGeneric),
-            retType = new TypeVariable()
-        unify(functionType(argType, retType), funcType)
-        return retType
     }
     else if (node instanceof Lambda) {
         let argType = new TypeVariable(),
@@ -149,7 +138,15 @@ export function analyse(node: AstNode, envOrMap: any, nonGeneric: Set<AstType> =
             retType = analyse(node.body, newEnv, newGeneric)
         return functionType(argType, retType)
     }
+    else if (node instanceof Apply) {
+        let funcType = analyse(node.func, env, nonGeneric),
+            argType = analyse(node.arg, env, nonGeneric),
+            retType = new TypeVariable()
+        unify(functionType(argType, retType), funcType)
+        return retType
+    }
     else {
         throw 'unhandled syntax node ' + node
     }
 }
+*/

@@ -1,12 +1,8 @@
-import { analyse } from './src/types'
-
-import { evaluate } from './src/interpreter'
-
-import { compile } from './src/compiler'
+import { TypeEnv } from './src/types'
 
 import { parse } from './src/parser'
 
-import { values, types } from './src/buildins'
+import { values, types, compilePrelude, compileVarRemap } from './src/buildins'
 
 declare function require(module: string): any
 
@@ -14,10 +10,13 @@ var source = require('raw!./lib/index.lisp')
 
 function exec(source: string) {
     var exp = parse(source),
-        val, type
+        type, val
     try {
-        type = analyse(exp, types)
-        val = evaluate(exp, values)
+        type = exp.analyse(new TypeEnv(types as any), new Set())
+        val = exp.evaluate(values)
+        var src = compilePrelude + exp.compile(compileVarRemap)
+        console.log(src)
+        console.log(val, eval(src))
     }
     catch (e) {
         console.log('ERR: ' + (e && e.message || e))

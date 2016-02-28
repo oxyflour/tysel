@@ -1,10 +1,7 @@
 import {
     functionType,
     TypeVariable, TypeOperator, TypeEnv,
-    analyse
 } from './types'
-
-import { evaluate } from './interpreter'
 
 import { parse } from './parser'
 
@@ -13,15 +10,8 @@ const NumberType = new TypeOperator(typeof(0), []),
     ListItemType = new TypeVariable,
     ListType = new TypeOperator('[]', [ListItemType])
 
-class List {
-    constructor(public head, public tail) { }
-}
-
-class Unit {
-}
-
 export const values = {
-    '!' : a => !a,
+    '!':  a => !a,
     '+':  a => b => a + b,
     '-':  a => b => a - b,
     '*':  a => b => a * b,
@@ -35,13 +25,13 @@ export const values = {
     '?':  t => a => b => t === true ? a : b,
     ';':  a => b => b,
 
-    '()': new Unit(),
-    'unit?': a => a instanceof Unit,
+    '()': NaN,
+    'unit?': a => a !== a,
 
-    ',':  a => b => new List(a, b),
-    'list?': a => a instanceof List,
-    'head': a => a.head,
-    'tail': a => a.tail,
+    ',':  a => b => [a, b],
+    'list?': a => Array.isArray(a),
+    'head': a => a[0],
+    'tail': a => a[1],
 
     'echo': t => (console.log(t), values.echo),
 }
@@ -50,7 +40,7 @@ export const values = {
 // http://matt.might.net/articles/...
 //        implementation-of-recursive-fixed-point-y-combinator-...
 //        in-javascript-for-memoization/
-values['Y'] = evaluate(parse('\\ F (F (\\ x ((Y F) x)))'), values)
+values['Y'] = parse('\\ F (F (\\ x ((Y F) x)))').evaluate(values)
 
 export const types = {
     '!':  functionType(BoolType, BoolType),
@@ -80,3 +70,52 @@ export const types = {
     // https://en.wikipedia.org/wiki/Fixed-point_combinator#Type_for_the_Y_combinator
     'Y':  (a => functionType(functionType(a, a), a))(new TypeVariable),
 }
+
+const compileConsts = {
+    '!': 'a => !a',
+    '+':  'a => b => a + b',
+    '-':  'a => b => a - b',
+    '*':  'a => b => a * b',
+    '/':  'a => b => a / b',
+    '>':  'a => b => a > b',
+    '<':  'a => b => a < b',
+    '>=': 'a => b => a >= b',
+    '<=': 'a => b => a <= b',
+    '==': 'a => b => a === b',
+    '!=': 'a => b => a !== b',
+    '?':  't => a => b => t === true ? a : b',
+    ';':  'a => b => b',
+    ',':  'a => b => [a, b]',
+    '()': 'null',
+    'unit?': 'a => a === null',
+    'head': 'a => a[0]',
+    'tail': 'a => a[1]',
+    'list?': 'Array.isArray',
+    'Y': 'F => F(x => Y(F)(x))',
+    'echo': 't => (console.log(t), echo)'
+}
+export const compileVarRemap = {
+    '!':  'NOT',
+    '+':  'ADD',
+    '-':  'MINUS',
+    '*':  'TIMES',
+    '/':  'DIV',
+    '>':  'GT',
+    '<':  'LT',
+    '>=': 'GE',
+    '<=': 'LE',
+    '==': 'EQ',
+    '!=': 'NEQ',
+    '?':  'IF',
+    ';':  'BEGIN',
+    ',':  'LIST',
+    '()': 'NULL',
+    'unit?': 'isNull',
+    'list?': 'isArray',
+}
+const compilePreludeArray = [ ]
+Object.keys(compileConsts).forEach((k, i) => {
+    var name = compileVarRemap[k] || k
+    compilePreludeArray.push(name + ' = ' + compileConsts[k])
+})
+export const compilePrelude = 'var ' + compilePreludeArray.join(', ') + ';'
