@@ -1,80 +1,53 @@
-import { AstNode, Literal, Id, Lambda, Apply } from './common'
-
-const INFIX = '+|-|*|/|>|<|>=|<=|==|!=|,|;'
-    .split('|').reduce((d, c) => (d[c] = 1, d), { })
+import {
+    AstNode, Literal, Id, Lambda, Apply,
+    If, Let, Letrec,
+} from './common'
 
 const SEPS = /(\(|\)|\[|\]|{|})/g
 
+function unfoldLet(arr: any[]) {
+    for (var i = 0; i < arr.length - 1; i += 2)
+        if (Array.isArray(arr[i])) {
+            arr[i + 1] = ['\\', ...arr[i].slice(1), arr[i + 1]]
+            arr[i] = arr[i][0]
+        }
+    return arr
+}
+
+function unfoldMacro(arr: any[], macros) {
+    macros = Object.assign({ }, macros)
+    for (var i = 0; i < arr.length - 1; i += 2) {
+        var def = arr[i], val = arr[i + 1]
+        if (Array.isArray(def))
+            macros['(' + def[0]] = [def.slice(1), val]
+        else
+            macros[def] = val
+    }
+    return macros
+}
+
 function unfold(node: any, macros): AstNode {
     if (Array.isArray(node)) {
-        var head = node[0]
-        if (head === '\\') {
-            var body = node.length > 3 ? [head].concat(node.slice(2)) : node[2]
-            return new Lambda(new Id(node[1]), unfold(body, macros))
-        }
-        else if (head === 'macro') {
-            var body = node.length > 4 ? [head].concat(node.slice(3)) : node[3],
-                id = node[1], value = node[2]
-            if (Array.isArray(id)) {
-                value = [id.slice(1), value]
-                id = '(' + id[0]
-            }
-            macros = Object.assign({ }, macros, { [id]:value })
-            return unfold(body, macros)
-        }
+        var [head, ...rest] = node
+        if (head === '\\')
+            return Lambda.fromList(...rest.map(n => unfold(n, macros)))
+        else if (head === 'macro')
+            return unfold(rest[rest.length - 1], unfoldMacro(rest, macros))
         // TODO: use pattern match to test macro here
         else if (macros['(' + head]) {
-            var [args, body] = macros['(' + head],
-                vals = node.slice(1)
+            var [args, body] = macros['(' + head]
             macros = Object.assign({ }, macros)
-            args.forEach((n, i) => macros[n] = vals[i])
+            args.forEach((n, i) => macros[n] = rest[i])
             return unfold(body, macros)
         }
-        else if (head === 'let') {
-            var body = node.length > 4 ? [head].concat(node.slice(3)) : node[3],
-                variable = node[1], value = node[2]
-            if (Array.isArray(variable)) {
-                value = ['\\'].concat(variable.slice(1)).concat([node[2]])
-                variable = variable[0]
-            }
-            return unfold([
-                ['\\', variable, body],
-                value
-            ], macros)
-        }
-        else if (head === 'letrec') {
-            var body = node.length > 4 ? [head].concat(node.slice(3)) : node[3],
-                variable = node[1], value = node[2]
-            if (Array.isArray(variable)) {
-                value = ['\\'].concat(variable.slice(1)).concat([node[2]])
-                variable = variable[0]
-            }
-            return unfold([
-                ['\\', variable, body],
-                ['Y', ['\\', variable, value]]
-            ], macros)
-        }
-        else if (head === 'if') {
-            var body = node.length > 4 ? [head].concat(node.slice(3)) : node[3]
-            return unfold([
-                ['?', node[1],
-                    ['\\', '_', node[2]],
-                    ['\\', '_', body]
-                ],
-                '0',
-            ], macros)
-        }
-        else {
-            var func = node.length > 2 ? node.slice(0, -1) : node[0],
-                arg = node[node.length - 1]
-            if (typeof(arg) === 'string') {
-                if (INFIX[ arg ])
-                    [func, arg] = [arg, func]
-                else if (arg[0] === '`')
-                    [func, arg] = [arg.substr(1), func]
-            }
-            return new Apply(unfold(func, macros), unfold(arg, macros))
-        }
+        else if (head === 'let')
+            return Let.fromList(...unfoldLet(rest).map(n => unfold(n, macros)))
+        else if (head === 'letrec')
+            return Letrec.fromList(...unfoldLet(rest).map(n => unfold(n, macros)))
+        else if (head === 'if')
+            return If.fromList(...rest.map(n => unfold(n, macros)))
+        else
+            return Apply.fromList(...node.map(n => unfold(n, macros)))
     }
     else {
         // TODO: support more types

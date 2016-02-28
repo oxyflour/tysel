@@ -1,11 +1,16 @@
-import { AstType, TypeOperator, TypeVariable, TypeEnv,
-	functionType, unify } from './types'
+import {
+	AstType, TypeOperator, TypeVariable, TypeEnv,
+	functionType, unify
+} from './types'
 
 type EvalEnv = any
 
 class Closure {
 	constructor(public lambda: Lambda, public environment: EvalEnv) { }
 }
+
+const INFIX = '+|-|*|/|>|<|>=|<=|==|!=|,|;'
+    .split('|').reduce((d, c) => (d[c] = 1, d), { })
 
 export interface AstNode {
 	evaluate(env: EvalEnv): any
@@ -59,6 +64,10 @@ export class Lambda implements AstNode {
     compile(map) {
     	return '(' + this.arg.compile(map) + ' => ' + this.body.compile(map) + ')'
     }
+    static fromList(...args) {
+    	return new Lambda(args[0],
+    		args.length > 2 ? Lambda.fromList(...args.slice(1)) : args[1])
+    }
 }
 
 export class Apply implements AstNode {
@@ -87,4 +96,91 @@ export class Apply implements AstNode {
     compile(map) {
     	return this.func.compile(map) + '(' + this.arg.compile(map) + ')'
     }
+    static fromList(...args: AstNode[]) {
+    	var func = args.length > 2 ? Apply.fromList(...args.slice(0, -1)) : args[0],
+    		arg = args[args.length - 1]
+    	if (arg instanceof Id) {
+    		if (INFIX[arg.name])
+    			[func, arg] = [arg, func]
+    		else if (arg.name[0] === '`')
+    			[func, arg] = [new Id(arg.name.substr(1)), func]
+    	}
+    	return new Apply(func, arg)
+    }
+}
+
+export class If implements AstNode {
+	node: AstNode
+	constructor(public test: AstNode, public actionA: AstNode, public actionB: AstNode) {
+		this.node = Apply.fromList(
+			new Id('?'), this.test,
+			new Lambda(new Id('_'), this.actionA),
+			new Lambda(new Id('_'), this.actionB),
+			new Literal(0))
+	}
+	evaluate(env: EvalEnv) {
+		return this.node.evaluate(env)
+	}
+	analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
+		return this.node.analyse(env, nonGeneric)
+	}
+	compile(map) {
+		return '(' + this.test.compile(map) + ' === true) ? ' +
+			'(' + this.actionA.compile(map) + ') : ' +
+			'(' + this.actionB.compile(map) + ')'
+	}
+	static fromList(...args) {
+		return new If(args[0], args[1],
+			args.length > 3 ? If.fromList(...args.slice(2)) : args[2])
+	}
+}
+
+export class Let implements AstNode {
+	node: AstNode
+	constructor(public variable: Id, public value: AstNode, public expression: AstNode) {
+		this.node = new Apply(new Lambda(variable, expression), value)
+	}
+	evaluate(env: EvalEnv) {
+		return this.node.evaluate(env)
+	}
+	analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
+		return this.node.analyse(env, nonGeneric)
+	}
+	compile(map) {
+		return this.node.compile(map)
+	}
+	static fromList(...args) {
+		return new Let(args[0], args[1],
+			args.length > 3 ? Let.fromList(...args.slice(2)) : args[2])
+	}
+}
+
+export class Letrec implements AstNode {
+	node: AstNode
+	defs: [Id, AstNode][] = [ ]
+	body: AstNode
+	constructor(public variable: Id, public value: AstNode, public expression: AstNode) {
+		this.node = new Apply(
+			new Lambda(variable, expression),
+			new Apply(new Id('Y'), new Lambda(variable, value)))
+	}
+	evaluate(env: EvalEnv) {
+		return this.node.evaluate(env)
+	}
+	analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
+		return this.node.analyse(env, nonGeneric)
+	}
+	compile(map) {
+		var defs = this.defs.map(def => def[0].compile(map) + ' = ' + def[1].compile(map)),
+			vars = defs.length > 0 ? 'var ' + defs.join(', ') + '; ' : ''
+		return '(() => { ' + vars + 'return ' + this.body.compile(map) + ' })()'
+	}
+	static fromList(...args) {
+		var node = new Letrec(args[0], args[1],
+			args.length > 3 ? Let.fromList(...args.slice(2)) : args[2])
+		for (var i = 0; i < args.length - 1; i += 2)
+			node.defs.push([args[i], args[i + 1]])
+		node.body = args[args.length - 1]
+		return node
+	}
 }

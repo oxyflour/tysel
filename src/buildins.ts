@@ -5,6 +5,9 @@ import {
 
 import { parse } from './parser'
 
+const VOID = () => VOID,
+    ECHO = t => (console.log(t), ECHO)
+
 const NumberType = new TypeOperator(typeof(0), []),
     BoolType = new TypeOperator(typeof(true), []),
     ListItemType = new TypeVariable,
@@ -33,7 +36,8 @@ export const values = {
     'head': a => a[0],
     'tail': a => a[1],
 
-    'echo': t => (console.log(t), values.echo),
+    'void': VOID,
+    'echo': ECHO,
 }
 
 // the Y combinator is so tricky
@@ -65,6 +69,7 @@ export const types = {
     'head': functionType(ListType, ListType),
     'tail': functionType(ListType, ListItemType),
 
+    'void': functionType(new TypeVariable, new TypeVariable),
     'echo': functionType(new TypeVariable, new TypeVariable),
 
     // https://en.wikipedia.org/wiki/Fixed-point_combinator#Type_for_the_Y_combinator
@@ -92,6 +97,7 @@ const compileConsts = {
     'tail': 'a => a[1]',
     'list?': 'Array.isArray',
     'Y': 'F => F(x => Y(F)(x))',
+    'void': '() => VOID',
     'echo': 't => (console.log(t), echo)'
 }
 export const compileVarRemap = {
@@ -112,10 +118,11 @@ export const compileVarRemap = {
     '()': 'NULL',
     'unit?': 'isNull',
     'list?': 'isArray',
+    'void' : 'VOID'
 }
 const compilePreludeArray = [ ]
 Object.keys(compileConsts).forEach((k, i) => {
     var name = compileVarRemap[k] || k
     compilePreludeArray.push(name + ' = ' + compileConsts[k])
 })
-export const compilePrelude = 'var ' + compilePreludeArray.join(', ') + ';'
+export const compilePrelude = 'var ' + compilePreludeArray.join(', ') + '; '
