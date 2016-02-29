@@ -109,20 +109,27 @@ export class Apply implements AstNode {
     }
 }
 
-export class If implements AstNode {
-	node: AstNode
-	constructor(public test: AstNode, public actionA: AstNode, public actionB: AstNode) {
-		this.node = Apply.fromList(
-			new Id('?'), this.test,
-			new Lambda(new Id('_'), this.actionA),
-			new Lambda(new Id('_'), this.actionB),
-			new Literal(0))
+export class Composite implements AstNode {
+	constructor(public node: AstNode) {
 	}
 	evaluate(env: EvalEnv) {
 		return this.node.evaluate(env)
 	}
 	analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
 		return this.node.analyse(env, nonGeneric)
+	}
+	compile(map) {
+		return this.node.compile(map)
+	}
+}
+
+export class If extends Composite {
+	constructor(public test: AstNode, public actionA: AstNode, public actionB: AstNode) {
+		super(Apply.fromList(
+			new Id('?'), test,
+			new Lambda(new Id('_'), actionA),
+			new Lambda(new Id('_'), actionB),
+			new Literal(0)))
 	}
 	compile(map) {
 		return '(' + this.test.compile(map) + ' === true) ? ' +
@@ -135,19 +142,9 @@ export class If implements AstNode {
 	}
 }
 
-export class Let implements AstNode {
-	node: AstNode
+export class Let extends Composite {
 	constructor(public variable: Id, public value: AstNode, public expression: AstNode) {
-		this.node = new Apply(new Lambda(variable, expression), value)
-	}
-	evaluate(env: EvalEnv) {
-		return this.node.evaluate(env)
-	}
-	analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
-		return this.node.analyse(env, nonGeneric)
-	}
-	compile(map) {
-		return this.node.compile(map)
+		super(new Apply(new Lambda(variable, expression), value))
 	}
 	static fromList(...args) {
 		return new Let(args[0], args[1],
@@ -155,20 +152,13 @@ export class Let implements AstNode {
 	}
 }
 
-export class Letrec implements AstNode {
-	node: AstNode
+export class Letrec extends Composite {
 	defs: [Id, AstNode][] = [ ]
 	body: AstNode
 	constructor(public variable: Id, public value: AstNode, public expression: AstNode) {
-		this.node = new Apply(
+		super(new Apply(
 			new Lambda(variable, expression),
-			new Apply(new Id('Y'), new Lambda(variable, value)))
-	}
-	evaluate(env: EvalEnv) {
-		return this.node.evaluate(env)
-	}
-	analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
-		return this.node.analyse(env, nonGeneric)
+			new Apply(new Id('Y'), new Lambda(variable, value))))
 	}
 	compile(map) {
 		var defs = this.defs.map(def => def[0].compile(map) + ' = ' + def[1].compile(map)),
