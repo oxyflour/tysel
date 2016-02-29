@@ -5,10 +5,6 @@ import {
 
 type EvalEnv = any
 
-class Closure {
-	constructor(public lambda: Lambda, public environment: EvalEnv) { }
-}
-
 const INFIX = '+|-|*|/|>|<|>=|<=|==|!=|,|;|.'
     .split('|').reduce((d, c) => (d[c] = 1, d), { })
 
@@ -52,7 +48,11 @@ export class Lambda implements AstNode {
     constructor(public arg: Id, public body: AstNode) { }
     toString() { return `(fn ${this.arg} => ${this.body})` }
     evaluate(env: EvalEnv) {
-    	return new Closure(this, env)
+    	// returns a true javascript function
+    	return arg => {
+            var fenv = Object.assign({}, env, { [this.arg.name]:arg })
+            return this.body.evaluate(fenv)
+    	}
     }
     analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
         let argType = new TypeVariable(),
@@ -76,15 +76,9 @@ export class Apply implements AstNode {
     evaluate(env: EvalEnv) {
 	    var func = this.func.evaluate(env),
 	        arg = this.arg.evaluate(env)
-	    if (func instanceof Closure) {
-	        var { lambda, environment } = func,
-	            fenv = Object.assign({}, environment, { [lambda.arg]:arg })
-	        return lambda.body.evaluate(fenv)
-	    }
-	    else if (typeof(func) === 'function')
+	    if (typeof(func) === 'function')
 	        return func['call'](null, arg)
-	    else
-	        throw 'the function `' + this.func + '` is not applicable'
+        throw 'the function `' + this.func + '` is not applicable'
     }
     analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
         let funcType = this.func.analyse(env, nonGeneric),
