@@ -5,6 +5,11 @@ import {
 
 const SEPS = /(\(|\)|\[|\]|{|})/g
 
+function groupBySize(arr: any[], size: number): any[] {
+    return Array(Math.floor(arr.length / size) + 1).fill(0)
+        .map((_, i) => arr.slice(i * size, (i + 1) * size))
+}
+
 function unfoldLet(arr: any[]) {
     for (var i = 0; i < arr.length - 1; i += 2)
         if (Array.isArray(arr[i])) {
@@ -40,17 +45,21 @@ function unfold(node: any, macros): AstNode {
             return unfold(body, macros)
         }
         else if (head === '\\')
-            return Lambda.fromList(...rest.map(n => unfold(n, macros)))
+            return rest.map(n => unfold(n, macros))
+                .reduceRight((c, n) => new Lambda(n, c))
         else if (head === 'let')
-            return Let.fromList(...unfoldLet(rest).map(n => unfold(n, macros)))
+            return groupBySize(unfoldLet(rest).map(n => unfold(n, macros)), 2)
+                .reduceRight((c, n) =>    new Let(n[0], n[1], c[0] || c))
         else if (head === 'letrec')
-            return Letrec.fromList(...unfoldLet(rest).map(n => unfold(n, macros)))
+            return groupBySize(unfoldLet(rest).map(n => unfold(n, macros)), 2)
+                .reduceRight((c, n) => new Letrec(n[0], n[1], c[0] || c))
+                .precompile()
         else if (head === 'if')
-            return If.fromList(...rest.map(n => unfold(n, macros)))
-        else if (head === '"')
-            return new Literal(rest.join(' '))
+            return groupBySize(rest.map(n => unfold(n, macros)), 2)
+                .reduceRight((c, n) =>     new If(n[0], n[1], c[0] || c))
         else
-            return Apply.fromList(...node.map(n => unfold(n, macros)))
+            return node.map(n => unfold(n, macros))
+                .reduce((c, n) => new Apply(c, n))
     }
     else {
         if (macros[node]) {

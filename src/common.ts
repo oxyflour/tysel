@@ -64,14 +64,17 @@ export class Lambda implements AstNode {
     compile(map) {
     	return '(' + this.arg.compile(map) + ' => ' + this.body.compile(map) + ')'
     }
-    static fromList(...args) {
-    	return new Lambda(args[0],
-    		args.length > 2 ? Lambda.fromList(...args.slice(1)) : args[1])
-    }
 }
 
 export class Apply implements AstNode {
-    constructor(public func: AstNode, public arg: AstNode) { }
+    constructor(public func: AstNode, public arg: AstNode) {
+    	if (arg instanceof Id) {
+    		if (INFIX[arg.name])
+    			[this.func, this.arg] = [arg, func]
+    		else if (arg.name[0] === '`')
+    			[this.func, this.arg] = [new Id(arg.name.substr(1)), func]
+    	}
+    }
     toString() { return `(${this.func} ${this.arg})` }
     evaluate(env: EvalEnv) {
 	    var func = this.func.evaluate(env),
@@ -89,17 +92,6 @@ export class Apply implements AstNode {
     }
     compile(map) {
     	return this.func.compile(map) + '(' + this.arg.compile(map) + ')'
-    }
-    static fromList(...args: AstNode[]) {
-    	var func = args.length > 2 ? Apply.fromList(...args.slice(0, -1)) : args[0],
-    		arg = args[args.length - 1]
-    	if (arg instanceof Id) {
-    		if (INFIX[arg.name])
-    			[func, arg] = [arg, func]
-    		else if (arg.name[0] === '`')
-    			[func, arg] = [new Id(arg.name.substr(1)), func]
-    	}
-    	return new Apply(func, arg)
     }
 }
 
@@ -119,20 +111,17 @@ export class Composite implements AstNode {
 
 export class If extends Composite {
 	constructor(public test: AstNode, public actionA: AstNode, public actionB: AstNode) {
-		super(Apply.fromList(
+		super([
 			new Id('?'), test,
 			new Lambda(new Id('_'), actionA),
 			new Lambda(new Id('_'), actionB),
-			new Literal(0)))
+			new Literal(0)
+		].reduce((c, n) => new Apply(c, n)))
 	}
 	compile(map) {
 		return '(' + this.test.compile(map) + ' === true) ? ' +
 			'(' + this.actionA.compile(map) + ') : ' +
 			'(' + this.actionB.compile(map) + ')'
-	}
-	static fromList(...args) {
-		return new If(args[0], args[1],
-			args.length > 3 ? If.fromList(...args.slice(2)) : args[2])
 	}
 }
 
@@ -140,31 +129,28 @@ export class Let extends Composite {
 	constructor(public variable: Id, public value: AstNode, public expression: AstNode) {
 		super(new Apply(new Lambda(variable, expression), value))
 	}
-	static fromList(...args) {
-		return new Let(args[0], args[1],
-			args.length > 3 ? Let.fromList(...args.slice(2)) : args[2])
-	}
 }
 
 export class Letrec extends Composite {
-	defs: [Id, AstNode][] = [ ]
+	defs: Letrec[] = [ ]
 	body: AstNode
 	constructor(public variable: Id, public value: AstNode, public expression: AstNode) {
 		super(new Apply(
 			new Lambda(variable, expression),
 			new Apply(new Id('Y'), new Lambda(variable, value))))
 	}
+	precompile() {
+		var node = this
+		while (node instanceof Letrec) {
+			this.defs.push(node)
+			node = node.expression as any
+		}
+		this.body = node
+		return this
+	}
 	compile(map) {
-		var defs = this.defs.map(def => def[0].compile(map) + ' = ' + def[1].compile(map)),
+		var defs = this.defs.map(def => def.variable.compile(map) + ' = ' + def.value.compile(map)),
 			vars = defs.length > 0 ? 'var ' + defs.join(', ') + '; ' : ''
 		return '(() => { ' + vars + 'return ' + this.body.compile(map) + ' })()'
-	}
-	static fromList(...args) {
-		var node = new Letrec(args[0], args[1],
-			args.length > 3 ? Letrec.fromList(...args.slice(2)) : args[2])
-		for (var i = 0; i < args.length - 1; i += 2)
-			node.defs.push([args[i], args[i + 1]])
-		node.body = args[args.length - 1]
-		return node
 	}
 }
