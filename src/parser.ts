@@ -19,12 +19,18 @@ function unfoldLet(arr: any[]) {
     return arr
 }
 
+function replaceNode(node: any, macros) {
+    if (Array.isArray(node))
+        return node.map(n => replaceNode(n, macros))
+    return node in macros ? macros[node] : node
+}
+
 function unfoldMacro(arr: any[], macros) {
     macros = Object.assign({ }, macros)
     for (var i = 0; i < arr.length - 1; i += 2) {
         var def = arr[i], val = arr[i + 1]
         if (Array.isArray(def))
-            macros['(' + def[0]] = [def.slice(1), val]
+            macros['(' + def[0] + ')'] = [def.slice(1), val]
         else
             macros[def] = val
     }
@@ -35,14 +41,15 @@ function unfold(node: any, macros): AstNode {
     if (Array.isArray(node)) {
         var [head, ...rest] = node
         if (head === 'macro') {
-            return unfold(rest[rest.length - 1], unfoldMacro(rest, macros))
+            macros = unfoldMacro(rest, macros)
+            return unfold(replaceNode(rest[rest.length - 1], macros), macros)
         }
-        else if (macros['(' + head]) {
+        else if (macros['(' + head + ')']) {
             // TODO: use pattern match to test macro here
-            var [args, body] = macros['(' + head]
+            var [args, body] = macros['(' + head + ')']
             macros = Object.assign({ }, macros)
             args.forEach((n, i) => macros[n] = rest[i])
-            return unfold(body, macros)
+            return unfold(replaceNode(body, macros), macros)
         }
         else if (head === '\\')
             return rest.map(n => unfold(n, macros))
@@ -62,14 +69,8 @@ function unfold(node: any, macros): AstNode {
                 .reduce((c, n) => new Apply(c, n))
     }
     else {
-        if (macros[node]) {
-            var body = macros[node]
-            body = Array.isArray(body) ? body.slice() : body
-            macros = Object.assign({ }, macros, { [node]:null })
-            return unfold(body, macros)
-        }
         // TODO: support more types
-        else if (+node == node)
+        if (+node == node)
             return new Literal(+node)
         else if (node === 'true' || node === 'false')
             return new Literal(node === 'true')
