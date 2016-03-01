@@ -40,6 +40,9 @@ export const values = {
 
     'void': VOID,
     'echo': ECHO,
+    'cast': a => b => a,
+
+    'throw': a => { throw a }
 }
 
 // the Y combinator is so tricky
@@ -74,6 +77,9 @@ export const types = {
 
     'void': functionType(new TypeVariable, new TypeVariable),
     'echo': functionType(new TypeVariable, new TypeVariable),
+    'cast': (a => functionType(new TypeVariable, a, a))(new TypeVariable),
+
+    'throw': functionType(new TypeVariable, new TypeVariable),
 
     // https://en.wikipedia.org/wiki/Fixed-point_combinator#Type_for_the_Y_combinator
     'Y':  (a => functionType(functionType(a, a), a))(new TypeVariable),
@@ -102,7 +108,9 @@ const compileConsts = {
     'list?': 'Array.isArray',
     'Y': 'F => F(x => Y(F)(x))',
     'void': '() => VOID',
-    'echo': 't => (console.log(t), echo)'
+    'echo': 't => (console.log(t), echo)',
+    'cast': 'a => b => a',
+    'throw': 'e => { throw e }',
 }
 export const compileVarRemap = {
     '!':  'NOT',
@@ -123,7 +131,8 @@ export const compileVarRemap = {
     '()': 'NULL',
     'unit?': 'isNull',
     'list?': 'isArray',
-    'void' : 'VOID'
+    'void' : 'VOID',
+    'throw': 'THROW'
 }
 const compilePreludeArray = [ ]
 Object.keys(compileConsts).forEach((k, i) => {

@@ -1,25 +1,29 @@
-void
+let
+(assertEq a b) (if ((cast a 0) == (cast b 0)) 0 (throw 1))
+{
 
-(echo ">> testing strings")
-(echo ("abc" . "length"))
+	(assertEq ("abc" . "length") 3)
 
-(echo ">> testing letrec")
-(letrec
-	(printList a) (if (unit? a) 0 {
-		(printList (head a))
-		(echo (tail a))
-	})
-	(concat a b) (if (unit? b) a
-		((concat a (head b)) , (tail b)))
-	(printList (concat [1 2 3] [4 5 6])))
+	(letrec
+		(testArray a b) (if (unit? a) 0 {
+			(testArray (head a) (head b))
+			(assertEq (tail a) (tail b))
+		})
+		(concat a b) (if (unit? b) a
+			((concat a (head b)) , (tail b)))
+		(testArray
+			(concat [1 2 3] [4 5])
+			[1 2 3 4 5]))
 
-(echo ">> testing letrec/let/macro")
-(letrec
-	($ADD a b) (a + b)
-	(echo ($ADD 1 2)))
-(let
-	($ADD a b) (a + b)
-	(echo ($ADD 1 2)))
-(macro
-	($ADD a b) (a + b)
-	(echo ($ADD 1 2)))
+	(letrec
+		($ADD a b) (a + b)
+		(assertEq ($ADD 1 2) 3))
+	(let
+		($ADD a b) (a + b)
+		(assertEq ($ADD 1 2) 3))
+	(macro
+		($ADD a b) (a + b)
+		(assertEq ($ADD 1 2) 3))
+
+	(assertEq (cast "a" 0) (cast "a" 0))
+}
