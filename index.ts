@@ -1,34 +1,28 @@
 import { TypeEnv } from './src/types'
 
-import { Apply } from './src/common'
+import { AstNode, Apply } from './src/common'
 
 import { parse } from './src/parser'
 
 import { values, types, compilePrelude, compileVarRemap } from './src/buildins'
 
 function runVM(exp, values) {
-    var stack: any[] = [ exp, values ], ret: any[] = [ ]
+    var stack: [AstNode, any, boolean][] = [ [exp, values, true] ],
+        func = null
+
     function step() {
-        var env = stack.pop(),
-            node = stack.pop()
-        if (node instanceof Apply) {
-            stack.push(node.arg, env)
-            stack.push(node.func, env)
-            stack.push(null, null)
-        }
-        else if (node !== null && env !== null) {
-            ret.push(node.evaluate(env))
-        }
-        else {
-            var [func, arg] = ret, val
-            ret = [Apply.evaluate(func, arg, '')]
-        }
+        var [node, env, isFunc] = stack.pop()
+        if (node instanceof Apply)
+            stack.push([node.arg, env, false], [node.func, env, true])
+        else if (isFunc)
+            func = node.evaluate(env)
+        else
+            func = Apply.evaluate(func, node.evaluate(env), '')
     }
 
-    step()
-    while (stack.length > 1)
+    while (stack.length)
         step()
-    return ret[0]
+    return func
 }
 
 declare function require(module: string): any
@@ -44,5 +38,5 @@ try {
     console.log(val1, val2, val3)
 }
 catch (e) {
-    console.log('ERR: ' + (e && e.message || e))
+    console.error('ERR: ' + (e && e.message || e))
 }
