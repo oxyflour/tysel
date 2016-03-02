@@ -7,7 +7,7 @@ let
             (assertEq (tail a) (tail b))
         })
         (concat a b) (if (unit? b) a
-            ((concat a (head b)) , (tail b)))
+            ((concat a (head b)) : (tail b)))
         (testArray
             (concat [1 2 3] [4 5])
             [1 2 3 4 5]))

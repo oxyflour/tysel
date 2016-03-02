@@ -5,7 +5,7 @@ import {
 
 type EvalEnv = any
 
-const INFIX = '+|-|*|/|>|<|>=|<=|==|!=|,|;|.'
+const INFIX = '+|-|*|/|>|<|>=|<=|==|!=|,|;|:|.'
     .split('|').reduce((d, c) => (d[c] = 1, d), { })
 
 export interface AstNode {
