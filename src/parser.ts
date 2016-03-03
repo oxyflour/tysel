@@ -94,7 +94,7 @@ function convertNode(node, token) {
 export function parse(source: string): AstNode {
     var tokens = source
             // create string
-            .replace(/"([^"]+)"/g, (m, s) => "'" + btoa(s))
+            .replace(/"([^"]*)"/g, (m, s) => "'" + btoa(s))
             // seperate words
             .replace(SEPS, ' $1 ')
             // remove comments

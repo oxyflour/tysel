@@ -9,7 +9,7 @@ let
         (concat a b) (if (unit? b) a
             ((concat a (head b)) : (tail b)))
         (testArray
-            (concat [1 2 3] [4 5])
+            ([1 2 3] `concat [4 5])
             [1 2 3 4 5]))
 
     (letrec
@@ -22,7 +22,10 @@ let
         ($ADD a b) (a + b)
         (assertEq ($ADD 1 2) 3))
 
-    (assertEq ((cast "a" 0) + (cast "b" 0)) (cast "ab" 0))
+    (let
+        (concat a b) (cast ((cast a 0) + (cast b 0)) "")
+        (assertStrEq a b) (assertEq (cast a 0) (cast b 0))
+        (assertStrEq ("hello" `concat " " `concat "world") "hello world"))
 
     (assertEq ("abc" . "length") 3)
 }
