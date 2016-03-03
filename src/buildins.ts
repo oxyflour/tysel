@@ -30,8 +30,8 @@ export const values = {
     ';':  a => b => b,
     '.':  a => b => a[b],
 
-    '()': NaN,
-    'unit?': a => a !== a,
+    '()': null,
+    'unit?': a => a === null,
 
     ':':  a => b => [a, b],
     'list?': a => Array.isArray(a),
