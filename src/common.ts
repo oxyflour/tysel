@@ -163,3 +163,12 @@ export class Letrec extends Composite {
         return '(() => { ' + vars + 'return ' + this.body.compile(map) + ' })()'
     }
 }
+
+export class Cast extends Composite {
+    constructor(public value: AstNode, public type: AstNode) {
+        super(value)
+    }
+    analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
+        return this.type.analyse(env, nonGeneric)
+    }
+}

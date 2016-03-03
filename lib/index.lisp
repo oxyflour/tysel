@@ -1,8 +1,8 @@
 let
-(assertEq a b) (if (a == b) 0 (throw 1))
+(assertEq a b) (if (a == b) "ok" (throw "assert equal failed"))
 {
     (letrec
-        (testArray a b) (if (unit? a) 0 {
+        (testArray a b) (if (unit? a) "" {
             (testArray (head a) (head b))
             (assertEq (tail a) (tail b))
         })
@@ -22,10 +22,11 @@ let
         ($ADD a b) (a + b)
         (assertEq ($ADD 1 2) 3))
 
-    (let
-        (concat a b) (cast ((cast a 0) + (cast b 0)) "")
-        (assertStrEq a b) (assertEq (cast a 0) (cast b 0))
-        (assertStrEq ("hello" `concat " " `concat "world") "hello world"))
+    (letrec
+        zeroAsStr (cast 0 "")
+        concatStr (cast + "" "" "")
+        assertStrEq (cast assertEq "" "" true)
+        (assertStrEq ("hello" `concatStr "world" `concatStr zeroAsStr) "helloworld0"))
 
     (assertEq ("abc" . "length") 3)
 }

@@ -36,6 +36,7 @@ try {
         val2 = exp.evaluate(values),
         val3 = eval(compilePrelude + src)
     console.log(val1, val2, val3)
+    console.log(src)
 }
 catch (e) {
     console.error('ERR: ' + (e && e.message || e))
