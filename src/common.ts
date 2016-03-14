@@ -5,9 +5,6 @@ import {
 
 type EvalEnv = any
 
-const INFIX = '+|-|*|/|>|<|>=|<=|==|!=|,|;|:|.'
-    .split('|').reduce((d, c) => (d[c] = 1, d), { })
-
 export interface AstNode {
     evaluate(env: EvalEnv): any
     analyse(env: TypeEnv, nonGeneric: Set<AstType>): AstType
@@ -77,46 +74,38 @@ export class Lambda extends WithPosition implements AstNode {
 export class Apply extends WithPosition implements AstNode {
     constructor(public func: AstNode, public arg: AstNode) {
         super()
-        if (arg instanceof Id) {
-            if (INFIX[arg.name])
-                [this.func, this.arg] = [arg, func]
-            else if (arg.name[0] === '`')
-                [this.func, this.arg] = [new Id(arg.name.substr(1)), func]
-        }
+        if (arg instanceof Id && arg.name[0] === '`')
+            [this.func, this.arg] = [new Id(arg.name.substr(1)), func]
     }
     toString() { return `(${this.func} ${this.arg})` }
     evaluate(env: EvalEnv) {
-        var ret
         try {
-            ret = Apply.evaluate(
+            return Apply.evaluate(
                 this.func.evaluate(env),
                 this.arg.evaluate(env),
                 this.func)
         }
         catch (e) {
             throw {
-                evaluateError: 1,
+                message: e.message || e,
                 position: e.position || this.position,
-                message: e.message || e
             }
         }
-        return ret
     }
     analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
-        var retType = new TypeVariable()
         try{
             let funcType = this.func.analyse(env, nonGeneric),
-                argType = this.arg.analyse(env, nonGeneric)
+                argType = this.arg.analyse(env, nonGeneric),
+                retType = new TypeVariable()
             unify(functionType(argType, retType), funcType)
+            return retType
         }
         catch (e) {
             throw {
-                analyseError: 1,
+                message: e.message || e,
                 position: e.position || this.position,
-                message: e.message || e
             }
         }
-        return retType
     }
     compile(map) {
         return this.func.compile(map) + '(' + this.arg.compile(map) + ')'
@@ -134,7 +123,15 @@ export class Composite extends WithPosition implements AstNode {
         super()
     }
     evaluate(env: EvalEnv) {
-        return this.node.evaluate(env)
+        try {
+            return this.node.evaluate(env)
+        }
+        catch (e) {
+            throw {
+                message: e.message || e,
+                position: e.position || this.position,
+            }
+        }
     }
     analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
         try {
@@ -142,9 +139,8 @@ export class Composite extends WithPosition implements AstNode {
         }
         catch (e) {
             throw {
-                analyseError: 1,
+                message: e.message || e,
                 position: e.position || this.position,
-                message: e.message || e
             }
         }
     }

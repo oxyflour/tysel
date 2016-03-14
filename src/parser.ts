@@ -3,7 +3,9 @@ import {
     If, Let, Letrec, Cast,
 } from './common'
 
-const SEPS = /(\(|\)|\[|\]|{|})/g
+const SEPS = /(\(|\)|\[|\]|{|})/g,
+    INFIX = / (\+|-|\*|\/|>|<|>=|<=|==|!=|,|;|\:|\.) /g,
+    UNFIX = / `(\+|-|\*|\/|>|<|>=|<=|==|!=|,|;|\:|\.) /g
 
 function groupBySize(arr: any[], size: number): any[] {
     return Array(Math.floor(arr.length / size) + 1).fill(0)
@@ -97,9 +99,9 @@ function unfold(node: any, macros): AstNode {
 function convertNode(node, token) {
     if (Array.isArray(node)) {
         if (token === '}')
-            node = node.reduce((l, n, i) => l.concat([';', n]), ['0'])
+            node = node.reduce((l, n, i) => l.concat(['`;', n]), ['0'])
         else if (token === ']')
-            node = node.reduce((l, n, i) => l.concat([':', n]), ['()'])
+            node = node.reduce((l, n, i) => l.concat(['`:', n]), ['()'])
     }
     return node
 }
@@ -142,6 +144,8 @@ export function parse(source: string): AstNode {
             .replace(/"([^"]*)"/g, (m, s) => "'" + btoa(s))
             // seperate words
             .replace(SEPS, ' $1 ')
+            // update infix operators
+            .replace(UNFIX, ' ``$1 ').replace(INFIX, ' `$1 ').replace(/ ``(\S+) /g, ' $1 ')
             // remove comments
             .replace(/;[^\n]*/g, '')
             // merge blanks

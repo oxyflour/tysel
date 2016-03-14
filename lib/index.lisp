@@ -24,7 +24,7 @@ let
 
     (letrec
         zeroAsStr (cast 0 "")
-        concatStr (cast + "" "" "")
+        concatStr (cast `+ "" "" "")
         assertStrEq (cast assertEq "" "" true)
         (assertStrEq ("hello" `concatStr "world" `concatStr zeroAsStr) "helloworld0"))
 
