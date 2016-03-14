@@ -3,10 +3,12 @@ import {
     TypeVariable, TypeOperator, TypeEnv,
 } from './types'
 
-import { parse } from './parser'
-
 const VOID = () => VOID,
-    ECHO = t => (console.log(t), ECHO)
+    ECHO = t => (console.log(t), ECHO),
+    // http://matt.might.net/articles/...
+    //        implementation-of-recursive-fixed-point-y-combinator-...
+    //        in-javascript-for-memoization/
+    Y = F => F(x => Y(F)(x))
 
 const NumberType = new TypeOperator(typeof(0), []),
     BoolType = new TypeOperator(typeof(true), []),
@@ -42,14 +44,10 @@ export const values = {
     'echo': ECHO,
     'cast': a => b => a,
 
-    'throw': a => { throw a }
-}
+    'throw': a => { throw a },
 
-// the Y combinator is so tricky
-// http://matt.might.net/articles/...
-//        implementation-of-recursive-fixed-point-y-combinator-...
-//        in-javascript-for-memoization/
-values['Y'] = parse('\\ F (F (\\ x ((Y F) x)))').evaluate(values)
+    'Y': Y
+}
 
 export const types = {
     '!':  functionType(BoolType, BoolType),

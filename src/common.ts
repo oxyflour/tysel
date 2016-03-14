@@ -14,6 +14,14 @@ export interface AstNode {
     compile(map): string
 }
 
+export class WithPosition {
+    position
+    setPosition(p) {
+        this.position = p
+        return this
+    }
+}
+
 export class Literal implements AstNode {
     constructor(public value: any) { }
     toString() { return typeof(this.value) }
@@ -44,18 +52,15 @@ export class Id implements AstNode {
     }
 }
 
-export class Lambda implements AstNode {
-    constructor(public arg: Id, public body: AstNode) { }
+export class Lambda extends WithPosition implements AstNode {
+    constructor(public arg: Id, public body: AstNode) { super() }
     toString() { return `(fn ${this.arg} => ${this.body})` }
     evaluate(env: EvalEnv) {
-        return [this, env]
         // returns a true javascript function
-        /*
         return arg => {
             var fenv = Object.assign({}, env, { [this.arg.name]:arg })
             return this.body.evaluate(fenv)
         }
-        */
     }
     analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
         let argType = new TypeVariable(),
@@ -69,8 +74,9 @@ export class Lambda implements AstNode {
     }
 }
 
-export class Apply implements AstNode {
+export class Apply extends WithPosition implements AstNode {
     constructor(public func: AstNode, public arg: AstNode) {
+        super()
         if (arg instanceof Id) {
             if (INFIX[arg.name])
                 [this.func, this.arg] = [arg, func]
@@ -80,13 +86,36 @@ export class Apply implements AstNode {
     }
     toString() { return `(${this.func} ${this.arg})` }
     evaluate(env: EvalEnv) {
-        return Apply.evaluate(this.func.evaluate(env), this.arg.evaluate(env), this.func)
+        var ret
+        try {
+            ret = Apply.evaluate(
+                this.func.evaluate(env),
+                this.arg.evaluate(env),
+                this.func)
+        }
+        catch (e) {
+            throw {
+                evaluateError: 1,
+                position: e.position || this.position,
+                message: e.message || e
+            }
+        }
+        return ret
     }
     analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
-        let funcType = this.func.analyse(env, nonGeneric),
-            argType = this.arg.analyse(env, nonGeneric),
-            retType = new TypeVariable()
-        unify(functionType(argType, retType), funcType)
+        var retType = new TypeVariable()
+        try{
+            let funcType = this.func.analyse(env, nonGeneric),
+                argType = this.arg.analyse(env, nonGeneric)
+            unify(functionType(argType, retType), funcType)
+        }
+        catch (e) {
+            throw {
+                analyseError: 1,
+                position: e.position || this.position,
+                message: e.message || e
+            }
+        }
         return retType
     }
     compile(map) {
@@ -94,24 +123,30 @@ export class Apply implements AstNode {
     }
 
     static evaluate(func, arg, name) {
-        if (Array.isArray(func)) {
-            var lambda: Lambda = func[0], env: EvalEnv = func[1]
-            return lambda.body.evaluate(Object.assign({ }, env, { [lambda.arg.name]:arg }))
-        }
-        else if (typeof(func) === 'function')
+        if (typeof(func) === 'function')
             return func['call'](null, arg)
         throw 'the function `' + name + '` is not applicable'
     }
 }
 
-export class Composite implements AstNode {
+export class Composite extends WithPosition implements AstNode {
     constructor(public node: AstNode) {
+        super()
     }
     evaluate(env: EvalEnv) {
         return this.node.evaluate(env)
     }
     analyse(env: TypeEnv, nonGeneric: Set<AstType>) {
-        return this.node.analyse(env, nonGeneric)
+        try {
+            return this.node.analyse(env, nonGeneric)
+        }
+        catch (e) {
+            throw {
+                analyseError: 1,
+                position: e.position || this.position,
+                message: e.message || e
+            }
+        }
     }
     compile(map) {
         return this.node.compile(map)

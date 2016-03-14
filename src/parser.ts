@@ -54,16 +54,20 @@ function unfold(node: any, macros): AstNode {
         else if (head === '\\')
             return rest.map(n => unfold(n, macros))
                 .reduceRight((c, n) => new Lambda(n, c))
+                .setPosition(node.position)
         else if (head === 'let')
             return groupBySize(unfoldLet(rest).map(n => unfold(n, macros)), 2)
                 .reduceRight((c, n) =>    new Let(n[0], n[1], c[0] || c))
+                .setPosition(node.position)
         else if (head === 'letrec')
             return groupBySize(unfoldLet(rest).map(n => unfold(n, macros)), 2)
                 .reduceRight((c, n) => new Letrec(n[0], n[1], c[0] || c))
+                .setPosition(node.position)
                 .precompile()
         else if (head === 'if')
             return groupBySize(rest.map(n => unfold(n, macros)), 2)
                 .reduceRight((c, n) =>     new If(n[0], n[1], c[0] || c))
+                .setPosition(node.position)
         else if (head === 'cast')
             return new Cast(
                 unfold(rest[0], macros),
@@ -71,9 +75,11 @@ function unfold(node: any, macros): AstNode {
                 unfold(rest.slice(1, -1).reduce((c, n, i) =>
                     ['\\', 'cast_var_' + i, ['cast', ['?', 'true', n, 'cast_var_' + i], c]],
                     rest[rest.length - 1]), macros))
+                .setPosition(node.position)
         else
             return node.map(n => unfold(n, macros))
                 .reduce((c, n) => new Apply(c, n))
+                .setPosition(node.position)
     }
     else {
         // TODO: support more types
@@ -98,6 +104,38 @@ function convertNode(node, token) {
     return node
 }
 
+function mark(source: string) {
+    var chars = source
+            .replace(/\[|\{/g, '(')
+            .replace(/\]|\}/g, ')')
+            .split(''),
+        stack = [ [] ],
+        map = { },
+        colNum = 1, lineNum = 1
+    chars.forEach((char, index) => {
+        if (char === '\n')
+            lineNum += (colNum = 1)
+        else
+            colNum ++
+
+        if (char === '(') {
+            var node = [ ] as any
+            node.start = { lineNum, colNum, index }
+            stack.push(node)
+        }
+        else if (char === ')') {
+            var node = stack.pop() as any
+            node.end = { lineNum, colNum, index }
+            stack[stack.length - 1].push(node)
+
+            var id = stack.map(x => x.length).join(':')
+            map[id] = { start:node.start, end:node.end }
+        }
+    })
+
+    return map
+}
+
 export function parse(source: string): AstNode {
     var tokens = source
             // create string
@@ -106,16 +144,27 @@ export function parse(source: string): AstNode {
             .replace(SEPS, ' $1 ')
             // remove comments
             .replace(/;[^\n]*/g, '')
+            // merge blanks
+            .replace(/\s+/g, ' ')
             // split
-            .replace(/\s+/g, ' ').split(' ').filter(x => x.length > 0),
-        stack = [ [] ]
+            .split(' ').filter(x => x.length > 0),
+        stack = [ [] ],
+        map = mark(source)
     tokens.forEach(token => {
-        if (token === '(' || token === '[' || token === '{')
-            stack.push([ ])
-        else if (token === ')' || token === ']' || token === '}')
-            stack[stack.length - 2].push(convertNode(stack.pop(), token))
-        else
+        if (token === '(' || token === '[' || token === '{') {
+            var node = [ ] as any
+            stack.push(node)
+        }
+        else if (token === ')' || token === ']' || token === '}') {
+            var node = convertNode(stack.pop(), token)
+            stack[stack.length - 1].push(node)
+
+            var id = stack.map(x => x.filter(Array.isArray).length).join(':')
+            node.position = map[id]
+        }
+        else {
             stack[stack.length - 1].push(token)
+        }
     })
     return unfold(stack[0], { })
 }
