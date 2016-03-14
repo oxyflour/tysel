@@ -12,9 +12,10 @@ declare function fetch(url: string): Promise<any>
 
 const cononicalPath = require('canonical-path'),
     dirName = require('utils-dirname')
-const IMPORT_CACHE = { }
+const IMPORT_CACHE = { },
+    DEPENDENCY_MAP = { }
 const doImport = url => new Promise((resolve, reject) => {
-    var source
+    var source = ''
     fetch(url)
         .then(resp => resp.text())
         .then(text => {
@@ -23,7 +24,7 @@ const doImport = url => new Promise((resolve, reject) => {
                 // ...
             }) as any), new Set())
             code.evaluate(Object.assign({}, values, {
-                'import!': makeImport(dirName(url)),
+                'import!': makeImport(url),
                 'export!': resolve
             }))
         })
@@ -38,8 +39,18 @@ const doImport = url => new Promise((resolve, reject) => {
             reject(err)
         })
 })
+const checkDependency = (base, child) => {
+    return DEPENDENCY_MAP[child] && Object.keys(DEPENDENCY_MAP[child]).some(childDep => {
+        return childDep === base || checkDependency(base, childDep)
+    })
+}
 export const makeImport = base => path => callback => {
-    var url = cononicalPath.normalize(base + '/' + path)
+    var url = cononicalPath.normalize(dirName(base) + '/' + path)
+
+    ;(DEPENDENCY_MAP[base] || (DEPENDENCY_MAP[base] = { }))[url] = 1
+    if (checkDependency(base, url))
+        throw 'circular dependency found!'
+
     if (!IMPORT_CACHE[url])
         IMPORT_CACHE[url] = doImport(url)
     IMPORT_CACHE[url].then(callback)
@@ -90,7 +101,7 @@ export const values = {
 
     'Y': Y,
 
-    'import!': makeImport('./lib'),
+    'import!': path => callback => callback(),
     'export!': ECHO,
 }
 
