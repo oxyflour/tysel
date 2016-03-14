@@ -21,6 +21,13 @@ function unfoldLet(arr: any[]) {
     return arr
 }
 
+function unfoldCast(arr: any[]) {
+    // unfold (cast fn t1 tr) to (cast fn (\ v1 (cast (? true v1 t1) tr)))
+    return arr.slice(1, -1).reduce(
+        (c, n, i) => ['\\', 'cast_var_' + i, ['cast', ['?', 'true', n, 'cast_var_' + i], c]],
+        arr[arr.length - 1])
+}
+
 function replaceNode(node: any, macros) {
     if (Array.isArray(node))
         return node.map(n => replaceNode(n, macros))
@@ -73,13 +80,11 @@ function unfold(node: any, macros): AstNode {
         else if (head === 'import')
             return groupBySize(rest.map(n => unfold(n, macros)), 2)
                 .reduceRight((c, n) => new Import(n[0], n[1], c[0] || c))
+                .setPosition(node.position)
         else if (head === 'cast')
             return new Cast(
-                unfold(rest[0], macros),
-                // unfold (cast fn t1 tr) to (cast fn (\ v1 (cast (? true v1 t1) tr)))
-                unfold(rest.slice(1, -1).reduce((c, n, i) =>
-                    ['\\', 'cast_var_' + i, ['cast', ['?', 'true', n, 'cast_var_' + i], c]],
-                    rest[rest.length - 1]), macros))
+                    unfold(rest[0], macros),
+                    unfold(rest.length > 1 ? unfoldCast(rest) : rest[0], macros))
                 .setPosition(node.position)
         else
             return node.map(n => unfold(n, macros))
