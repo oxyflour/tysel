@@ -3,6 +3,48 @@ import {
     TypeVariable, TypeOperator, TypeEnv,
 } from './types'
 
+import {
+    parse
+} from './parser'
+
+declare function require(module: string): any
+declare function fetch(url: string): Promise<any>
+
+const cononicalPath = require('canonical-path'),
+    dirName = require('utils-dirname')
+const IMPORT_CACHE = { }
+const doImport = url => new Promise((resolve, reject) => {
+    var source
+    fetch(url)
+        .then(resp => resp.text())
+        .then(text => {
+            var code = parse(source = text)
+            code.analyse(new TypeEnv(Object.assign({}, types, {
+                // ...
+            }) as any), new Set())
+            code.evaluate(Object.assign({}, values, {
+                'import!': makeImport(dirName(url)),
+                'export!': resolve
+            }))
+        })
+        .catch(err => {
+            if (err.message)
+                console.error('ERR:', err.message)
+            if (err.position && source) {
+                var p = err.position
+                console.error('AT:' + url + ':' + p.start.lineNum + ':' + p.start.colNum,
+                    source.substring(p.start.index, p.end.index + 1))
+            }
+            reject(err)
+        })
+})
+export const makeImport = base => path => callback => {
+    var url = cononicalPath.normalize(base + '/' + path)
+    if (!IMPORT_CACHE[url])
+        IMPORT_CACHE[url] = doImport(url)
+    IMPORT_CACHE[url].then(callback)
+}
+
 const VOID = () => VOID,
     ECHO = t => (console.log(t), ECHO),
     // http://matt.might.net/articles/...
@@ -46,7 +88,10 @@ export const values = {
 
     'throw': a => { throw a },
 
-    'Y': Y
+    'Y': Y,
+
+    'import!': makeImport('./lib'),
+    'export!': ECHO,
 }
 
 export const types = {
@@ -81,6 +126,9 @@ export const types = {
 
     // https://en.wikipedia.org/wiki/Fixed-point_combinator#Type_for_the_Y_combinator
     'Y':  (a => functionType(functionType(a, a), a))(new TypeVariable),
+
+    'import!': functionType(StringType, functionType(new TypeVariable, new TypeVariable)),
+    'export!': functionType(new TypeVariable, new TypeVariable),
 }
 
 const compileConsts = {
@@ -111,26 +159,28 @@ const compileConsts = {
     'throw': 'e => { throw e }',
 }
 export const compileVarRemap = {
-    '!':  'NOT',
-    '+':  'ADD',
-    '-':  'MINUS',
-    '*':  'TIMES',
-    '/':  'DIV',
-    '>':  'GT',
-    '<':  'LT',
-    '>=': 'GE',
-    '<=': 'LE',
-    '==': 'EQ',
-    '!=': 'NEQ',
-    '?':  'IF',
-    ';':  'BEGIN',
-    '.':  'PROP',
-    ':':  'LIST',
-    '()': 'NULL',
-    'unit?': 'isNull',
-    'list?': 'isArray',
-    'void' : 'VOID',
-    'throw': 'THROW'
+    '!':  '$B$NOT',
+    '+':  '$B$ADD',
+    '-':  '$B$MINUS',
+    '*':  '$B$TIMES',
+    '/':  '$B$DIV',
+    '>':  '$B$GT',
+    '<':  '$B$LT',
+    '>=': '$B$GE',
+    '<=': '$B$LE',
+    '==': '$B$EQ',
+    '!=': '$B$NEQ',
+    '?':  '$B$IF',
+    ';':  '$B$BEGIN',
+    '.':  '$B$PROP',
+    ':':  '$B$LIST',
+    '()': '$B$NULL',
+    'unit?': '$B$isNull',
+    'list?': '$B$isArray',
+    'void' : '$B$VOID',
+    'throw': '$B$THROW',
+    'import!': '$B$IMPORT',
+    'export!': '$B$EXPORT',
 }
 const compilePreludeArray = [ ]
 Object.keys(compileConsts).forEach((k, i) => {

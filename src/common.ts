@@ -203,3 +203,11 @@ export class Cast extends Composite {
         return this.type.analyse(env, nonGeneric)
     }
 }
+
+export class Import extends Composite {
+    constructor(public name: Id, public path: AstNode, public body: AstNode) {
+        super(new Apply(
+            new Apply(new Id('import!'), path),
+            new Lambda(name, body)))
+    }
+}

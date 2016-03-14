@@ -13,20 +13,25 @@ let
             [1 2 3 4 5]))
 
     (letrec
-        ($ADD a b) (a + b)
-        (assertEq ($ADD 1 2) 3))
+        (ADD a b) (a + b)
+        (assertEq (ADD 1 2) 3))
     (let
-        ($ADD a b) (a + b)
-        (assertEq ($ADD 1 2) 3))
+        (ADD a b) (a + b)
+        (assertEq (ADD 1 2) 3))
     (macro
-        ($ADD a b) (a + b)
-        (assertEq ($ADD 1 2) 3))
+        (ADD a b) (a + b)
+        (assertEq (ADD 1 2) 3))
 
     (letrec
         zeroAsStr (cast 0 "")
         concatStr (cast `+ "" "" "")
         assertStrEq (cast assertEq "" "" true)
         (assertStrEq ("hello" `concatStr "world" `concatStr zeroAsStr) "helloworld0"))
+
+    (import
+        u "prelude.lisp"
+        v "prelude/utils.lisp"
+        (echo (u + v)))
 
     (assertEq ("abc" . "length") 3)
 }

@@ -1,6 +1,6 @@
 import {
     AstNode, Literal, Id, Lambda, Apply,
-    If, Let, Letrec, Cast,
+    If, Let, Letrec, Cast, Import,
 } from './common'
 
 const SEPS = /(\(|\)|\[|\]|{|})/g,
@@ -59,7 +59,7 @@ function unfold(node: any, macros): AstNode {
                 .setPosition(node.position)
         else if (head === 'let')
             return groupBySize(unfoldLet(rest).map(n => unfold(n, macros)), 2)
-                .reduceRight((c, n) =>    new Let(n[0], n[1], c[0] || c))
+                .reduceRight((c, n) => new Let(n[0], n[1], c[0] || c))
                 .setPosition(node.position)
         else if (head === 'letrec')
             return groupBySize(unfoldLet(rest).map(n => unfold(n, macros)), 2)
@@ -68,8 +68,11 @@ function unfold(node: any, macros): AstNode {
                 .precompile()
         else if (head === 'if')
             return groupBySize(rest.map(n => unfold(n, macros)), 2)
-                .reduceRight((c, n) =>     new If(n[0], n[1], c[0] || c))
+                .reduceRight((c, n) => new If(n[0], n[1], c[0] || c))
                 .setPosition(node.position)
+        else if (head === 'import')
+            return groupBySize(rest.map(n => unfold(n, macros)), 2)
+                .reduceRight((c, n) => new Import(n[0], n[1], c[0] || c))
         else if (head === 'cast')
             return new Cast(
                 unfold(rest[0], macros),
